@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -506,12 +507,15 @@ public  class HdfsHelper {
                 case BOOLEAN:
                     objectInspector = ObjectInspectorFactory.getReflectionObjectInspector(Boolean.class, ObjectInspectorFactory.ObjectInspectorOptions.JAVA);
                     break;
+                case DECIMAL:
+                    objectInspector = ObjectInspectorFactory.getReflectionObjectInspector(BigDecimal.class, ObjectInspectorFactory.ObjectInspectorOptions.JAVA);
+                    break;
                 default:
                     throw DataXException
                             .asDataXException(
                                     HdfsWriterErrorCode.ILLEGAL_VALUE,
                                     String.format(
-                                            "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库写入这种字段类型. 字段名:[%s], 字段类型:[%d]. 请修改表中该字段的类型或者不同步该字段.",
+                                            "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库写入这种字段类型. 字段名:[%s], 字段类型:[%s]. 请修改表中该字段的类型或者不同步该字段.",
                                             eachColumnConf.getString(Key.NAME),
                                             eachColumnConf.getString(Key.TYPE)));
             }
@@ -587,6 +591,9 @@ public  class HdfsHelper {
                                 break;
                             case TIMESTAMP:
                                 recordList.add(new java.sql.Timestamp(column.asDate().getTime()));
+                                break;
+                            case DECIMAL:
+                                recordList.add(column.asBigDecimal());
                                 break;
                             default:
                                 throw DataXException
