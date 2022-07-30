@@ -16,5 +16,17 @@ public enum SupportHiveDataType {
     VARCHAR,
     CHAR,
 
-    BOOLEAN
+    BOOLEAN;
+
+    /**
+     * 对decimal做加工
+     */
+    public static SupportHiveDataType valOf(String name){
+        if (name != null) {
+            if (name.trim().toUpperCase().startsWith("DECIMAL")){
+                return DECIMAL;
+            }
+        }
+        return valueOf(name);
+    }
 }

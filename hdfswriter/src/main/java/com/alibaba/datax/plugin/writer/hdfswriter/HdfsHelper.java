@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat;
 import org.apache.hadoop.hive.ql.io.orc.OrcSerde;
 import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat;
@@ -19,6 +20,8 @@ import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.JavaHiveDecimalObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
@@ -32,6 +35,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public  class HdfsHelper {
     public static final Logger LOG = LoggerFactory.getLogger(HdfsWriter.Job.class);
@@ -472,7 +477,8 @@ public  class HdfsHelper {
     public List<ObjectInspector>  getColumnTypeInspectors(List<Configuration> columns){
         List<ObjectInspector>  columnTypeInspectors = Lists.newArrayList();
         for (Configuration eachColumnConf : columns) {
-            SupportHiveDataType columnType = SupportHiveDataType.valueOf(eachColumnConf.getString(Key.TYPE).toUpperCase());
+            String sourceColumnType = eachColumnConf.getString(Key.TYPE).toUpperCase();
+            SupportHiveDataType columnType = SupportHiveDataType.valOf(sourceColumnType);
             ObjectInspector objectInspector = null;
             switch (columnType) {
                 case TINYINT:
@@ -508,7 +514,8 @@ public  class HdfsHelper {
                     objectInspector = ObjectInspectorFactory.getReflectionObjectInspector(Boolean.class, ObjectInspectorFactory.ObjectInspectorOptions.JAVA);
                     break;
                 case DECIMAL:
-                    objectInspector = ObjectInspectorFactory.getReflectionObjectInspector(BigDecimal.class, ObjectInspectorFactory.ObjectInspectorOptions.JAVA);
+                    DecimalTypeInfo decimalTypeInfo = getDecimalTypeInfo(sourceColumnType);
+                    objectInspector = new JavaHiveDecimalObjectInspector(decimalTypeInfo);
                     break;
                 default:
                     throw DataXException
@@ -523,6 +530,23 @@ public  class HdfsHelper {
             columnTypeInspectors.add(objectInspector);
         }
         return columnTypeInspectors;
+    }
+
+    private static final Pattern DECIMAL_PATTERN = Pattern.compile("decimal\\(([0-9]+),([0-9]+)\\)", Pattern.CASE_INSENSITIVE);
+
+    public static DecimalTypeInfo getDecimalTypeInfo(String sourceColumnType){
+        DecimalTypeInfo res = new DecimalTypeInfo();
+        if (sourceColumnType != null) {
+            Matcher matcher = DECIMAL_PATTERN.matcher(sourceColumnType);
+            if (matcher.find()) {
+                res.setPrecision(Integer.parseInt(matcher.group(1)));
+                res.setScale(Integer.parseInt(matcher.group(2)));
+                return res;
+            }
+        }
+        res.setPrecision(10);
+        res.setScale(0);
+        return res;
     }
 
     public OrcSerde getOrcSerde(Configuration config){
@@ -555,7 +579,7 @@ public  class HdfsHelper {
                 //todo as method
                 if (null != column.getRawData()) {
                     String rowData = column.getRawData().toString();
-                    SupportHiveDataType columnType = SupportHiveDataType.valueOf(
+                    SupportHiveDataType columnType = SupportHiveDataType.valOf(
                             columnsConfiguration.get(i).getString(Key.TYPE).toUpperCase());
                     //根据writer端类型配置做类型转换
                     try {
@@ -593,14 +617,16 @@ public  class HdfsHelper {
                                 recordList.add(new java.sql.Timestamp(column.asDate().getTime()));
                                 break;
                             case DECIMAL:
-                                recordList.add(column.asBigDecimal());
+                                // FIXME: 2022/7/30  0则为null
+                                BigDecimal dec = BigDecimal.ZERO.equals(column.asBigDecimal()) ? null : column.asBigDecimal();
+                                recordList.add(HiveDecimal.create(dec));
                                 break;
                             default:
                                 throw DataXException
                                         .asDataXException(
                                                 HdfsWriterErrorCode.ILLEGAL_VALUE,
                                                 String.format(
-                                                        "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库写入这种字段类型. 字段名:[%s], 字段类型:[%d]. 请修改表中该字段的类型或者不同步该字段.",
+                                                        "您的配置文件中的列配置信息有误. 因为DataX 不支持数据库写入这种字段类型. 字段名:[%s], 字段类型:[%s]. 请修改表中该字段的类型或者不同步该字段.",
                                                         columnsConfiguration.get(i).getString(Key.NAME),
                                                         columnsConfiguration.get(i).getString(Key.TYPE)));
                         }
@@ -678,4 +704,23 @@ public  class HdfsHelper {
         }
     }
 
+    public static void main(String[] args) {
+        System.out.println(getDecimalTypeInfo("decimal(38,6)").getPrecision() == 38);
+        System.out.println(getDecimalTypeInfo("decimal(38,6)").scale() == 6);
+
+        System.out.println(getDecimalTypeInfo("decimal(38,-1)").getPrecision() == 10);
+        System.out.println(getDecimalTypeInfo("decimal(38,-1)").scale() == 0);
+
+        System.out.println(getDecimalTypeInfo("decimal(38)").getPrecision() == 10);
+        System.out.println(getDecimalTypeInfo("decimal(38)").scale() == 0);
+
+        System.out.println(getDecimalTypeInfo("decimal").getPrecision() == 10);
+        System.out.println(getDecimalTypeInfo("decimal").scale() == 0);
+
+        System.out.println(getDecimalTypeInfo("DECIMAL").getPrecision() == 10);
+        System.out.println(getDecimalTypeInfo("DECIMAL").scale() == 0);
+
+        System.out.println(getDecimalTypeInfo("DECIMAL(38,6)").getPrecision() == 38);
+        System.out.println(getDecimalTypeInfo("DECIMAL(38,6)").scale() == 6);
+    }
 }
