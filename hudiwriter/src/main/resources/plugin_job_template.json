@@ -1,0 +1,11 @@
+{
+    "name": "hudiwriter",
+    "parameter": {
+        "tablePath": "",
+        "tableType":"",
+        "tableName": "",
+        "primaryKey": "",
+        "writeOption": "",
+        "column": []
+    }
+}
