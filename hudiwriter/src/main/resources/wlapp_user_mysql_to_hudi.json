@@ -2,7 +2,7 @@
     "job": {
         "setting": {
             "speed": {
-                "channel": 1
+                "channel": 2
             }
         },
         "content": [
@@ -14,6 +14,7 @@
                             "id",
                             "name",
                             "age",
+                            "dt",
                             "score",
                             "create_at",
                             "update_at"
@@ -37,10 +38,12 @@
                     "name": "hudiwriter",
                     "parameter": {
                         "tableName": "user",
-                        "tablePath": "hdfs://localhost:9000//user/hive/warehouse/wlapp.db/user",
+                        "tablePath": "hdfs://localhost:9000/user/hive/warehouse/wlapp.db/user",
                         "tableType": "mor",
                         "writeOption": "upsert",
                         "primaryKey": "id",
+                        "partitionFields": "dt",
+                        "batchSize": 100,
                         "column": [
                             {
                                 "name": "id",
@@ -55,16 +58,20 @@
                                 "type": "int"
                             },
                             {
+                                "name": "dt",
+                                "type": "date"
+                            },
+                            {
                                 "name": "score",
                                 "type": "double"
                             },
                             {
                                 "name": "create_at",
-                                "type": "string"
+                                "type": "datetime"
                             },
                             {
                                 "name": "update_at",
-                                "type": "string"
+                                "type": "datetime"
                             }
                         ]
                     }

@@ -1,11 +1,13 @@
 {
     "name": "hudiwriter",
     "parameter": {
-        "tablePath": "",
-        "tableType":"",
         "tableName": "",
-        "primaryKey": "",
+        "tablePath": "",
+        "tableType": "",
         "writeOption": "",
+        "primaryKey": "",
+        "partitionFields": "",
+        "batchSize": "",
         "column": []
     }
 }

@@ -10,6 +10,8 @@ import com.alibaba.fastjson.JSONObject;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hudi.client.HoodieJavaWriteClient;
@@ -28,8 +30,11 @@ import org.apache.hudi.index.HoodieIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static com.alibaba.datax.plugin.writer.hudiwriter.HudiWriterErrorCode.HUDI_ERROR_TABLE;
 import static com.alibaba.datax.plugin.writer.hudiwriter.HudiWriterErrorCode.HUDI_PARAM_LOST;
@@ -79,42 +84,54 @@ public class HudiWriter extends Writer {
     public static class Task extends Writer.Task {
         private static final Logger LOG = LoggerFactory.getLogger(Task.class);
         private String primaryKey;
+        private String partitionFields;
         private String writeOption;
+        private int batchSize;
         private Configuration sliceConfig;
         private List<Configuration> columnsList;
+
+        private List<String> partitionList;
 
         Schema avroSchema;
 
         private HoodieJavaWriteClient<HoodieAvroPayload> client;
 
         @Override
-        public void init() throws IOException {
+        public void init() {
             //获取与本task相关的配置
             this.sliceConfig = super.getPluginJobConf();
             String tableName = sliceConfig.getNecessaryValue(Key.HUDI_TABLE_NAME, HUDI_ERROR_TABLE);
             String tablePath = sliceConfig.getNecessaryValue(Key.HUDI_TABLE_PATH, HUDI_PARAM_LOST);
             String tableType = sliceConfig.getNecessaryValue(Key.HUDI_TABLE_TYPE, HUDI_PARAM_LOST);
             primaryKey = sliceConfig.getNecessaryValue(Key.HUDI_PRIMARY_KEY, HUDI_PARAM_LOST);
+            partitionFields = sliceConfig.getString(Key.HUDI_PARTITION_FIELDS);
             writeOption = sliceConfig.getNecessaryValue(Key.HUDI_WRITE_OPTION, HUDI_PARAM_LOST);
             columnsList = sliceConfig.getListConfiguration(Key.HUDI_COLUMN);
+            batchSize = sliceConfig.getInt(HUDI_BATCH_SIZE);
+
+            partitionList = StringUtils.isEmpty(partitionFields) ? new ArrayList<>() : Arrays.asList(partitionFields.split(","));
 
             org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
             // initialize the table, if not done already
             Path path = new Path(tablePath);
             FileSystem fs = FSUtils.getFs(tablePath, hadoopConf);
-            if (!fs.exists(path)) {
-                HoodieTableMetaClient.withPropertyBuilder()
-                    .setTableType(HUDI_WRITE_TYPE_MOR.equals(tableType) ? HoodieTableType.MERGE_ON_READ : HoodieTableType.COPY_ON_WRITE)
-                    .setTableName(tableName)
-                    .setPayloadClassName(HoodieAvroPayload.class.getName())
-                    .initTable(hadoopConf, tablePath);
+            try {
+                if (!fs.exists(path)) {
+                    HoodieTableMetaClient.withPropertyBuilder()
+                        .setTableType(HUDI_WRITE_TYPE_MOR.equals(tableType) ? HoodieTableType.MERGE_ON_READ : HoodieTableType.COPY_ON_WRITE)
+                        .setTableName(tableName)
+                        .setPayloadClassName(HoodieAvroPayload.class.getName())
+                        .initTable(hadoopConf, tablePath);
+                }
+            } catch (IOException e) {
+                LOG.error(ExceptionUtils.getStackTrace(e));
             }
-
             JSONArray fields = new JSONArray();
             for (Configuration columnConfig : columnsList) {
                 JSONObject confObject = new JSONObject();
                 confObject.put("name", columnConfig.getString("name"));
-                confObject.put("type", columnConfig.getString("type"));
+                String configType = columnConfig.getString("type");
+                confObject.put("type", "date".equals(configType) || "datetime".equals(configType) ? "string" : configType);
                 fields.add(confObject);
             }
 
@@ -144,7 +161,8 @@ public class HudiWriter extends Writer {
         @Override
         public void startWrite(RecordReceiver recordReceiver) {
             Record record;
-            int batchSize = 100;
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            DateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             AtomicLong counter = new AtomicLong(0);
             List<HoodieRecord<HoodieAvroPayload>> writeRecords = new ArrayList<>();
             while ((record = recordReceiver.getFromReader()) != null) {
@@ -154,23 +172,38 @@ public class HudiWriter extends Writer {
                     String columnName = configuration.getString("name");
                     String columnType = configuration.getString("type");
                     Column column = record.getColumn(i);
-                    Object data = column.getRawData();
+                    Object rawData = column.getRawData();
+                    if (rawData == null) {
+                        row.put(columnName, null);
+                        continue;
+                    }
                     switch (columnType) {
                         case "int":
-                            row.put(columnName, Integer.parseInt(data.toString()));
+                            row.put(columnName, Integer.parseInt(rawData.toString()));
                             break;
                         case "float":
-                            row.put(columnName, Float.parseFloat(data.toString()));
-                            break;
-                        case "string":
-                            row.put(columnName, data.toString());
+                            row.put(columnName, Float.parseFloat(rawData.toString()));
                             break;
                         case "double":
-                            row.put(columnName, Double.parseDouble(data.toString()));
+                            row.put(columnName, Double.parseDouble(rawData.toString()));
                             break;
+                        case "date":
+                            row.put(columnName, dateFormat.format(rawData));
+                            break;
+                        case "datetime":
+                            row.put(columnName, dateTimeFormat.format(rawData));
+                            break;
+                        case "string":
+                        default:
+                            row.put(columnName, rawData.toString());
                     }
                 }
-                HoodieKey key = new HoodieKey(row.get(primaryKey).toString(), "");
+                String partitionPath = "";
+                if (!partitionList.isEmpty()) {
+                    List<Object> values = partitionList.stream().map(row::get).collect(Collectors.toList());
+                    partitionPath = StringUtils.join(values, "/");
+                }
+                HoodieKey key = new HoodieKey(row.get(primaryKey).toString(), partitionPath);
                 HoodieRecord<HoodieAvroPayload> hoodieAvroPayload = new HoodieRecord<>(key, new HoodieAvroPayload(Option.of(row)));
                 writeRecords.add(hoodieAvroPayload);
                 long num = counter.incrementAndGet();
