@@ -109,6 +109,9 @@
         <module>hbase20xsqlwriter</module>
         <module>kuduwriter</module>
         <module>neo4j-rw</module>
+
+<!--        doris-->
+        <module>starrockswriter</module>
     </modules>
 
     <distributionManagement>
