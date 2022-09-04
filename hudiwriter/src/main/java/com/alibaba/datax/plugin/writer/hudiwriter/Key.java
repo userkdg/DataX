@@ -16,4 +16,11 @@ public class Key {
 
     public static final String HUDI_WRITE_TYPE_COW = "cow";
     public static final String HUDI_WRITE_TYPE_MOR = "mor";
+
+    // Kerberos
+    public static final String HAVE_KERBEROS = "haveKerberos";
+    public static final String KERBEROS_KEYTAB_FILE_PATH = "kerberosKeytabFilePath";
+    public static final String KERBEROS_PRINCIPAL = "kerberosPrincipal";
+
+    public static final String HADOOP_SECURITY_AUTHENTICATION_KEY = "hadoop.security.authentication";
 }

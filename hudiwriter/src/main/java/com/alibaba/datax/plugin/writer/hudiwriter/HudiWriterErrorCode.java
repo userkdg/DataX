@@ -6,7 +6,8 @@ public enum HudiWriterErrorCode implements ErrorCode {
 
     HUDI_ERROR_TABLE("Hudi Error Table", "您的参数配置错误."),
     HUDI_PARAM_LOST("Hudi Param Lost", "您缺失了必须填写的参数值."),
-    HDFS_CONNECT_ERROR("Hdfs Connect Error", "与HDFS建立连接时出现IO异常.");
+    HDFS_CONNECT_ERROR("Hdfs Connect Error", "与HDFS建立连接时出现IO异常."),
+    KERBEROS_LOGIN_ERROR("Hdfs Login Error", "KERBEROS认证失败");
 
     private final String code;
     private final String description;

@@ -2,6 +2,7 @@ package com.alibaba.datax.plugin.writer.hudiwriter;
 
 import com.alibaba.datax.common.element.Column;
 import com.alibaba.datax.common.element.Record;
+import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.plugin.RecordReceiver;
 import com.alibaba.datax.common.spi.Writer;
 import com.alibaba.datax.common.util.Configuration;
@@ -14,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hudi.client.HoodieJavaWriteClient;
 import org.apache.hudi.client.common.HoodieJavaEngineContext;
 import org.apache.hudi.common.fs.FSUtils;
@@ -112,10 +114,18 @@ public class HudiWriter extends Writer {
             partitionList = StringUtils.isEmpty(partitionFields) ? new ArrayList<>() : Arrays.asList(partitionFields.split(","));
 
             org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
-            // initialize the table, if not done already
-            Path path = new Path(tablePath);
-            FileSystem fs = FSUtils.getFs(tablePath, hadoopConf);
             try {
+                //是否有Kerberos认证
+                Boolean haveKerberos = sliceConfig.getBool(HAVE_KERBEROS, false);
+                if(haveKerberos){
+                    String kerberosKeytabFilePath = sliceConfig.getString(Key.KERBEROS_KEYTAB_FILE_PATH);
+                    String kerberosPrincipal = sliceConfig.getString(Key.KERBEROS_PRINCIPAL);
+                    hadoopConf.set(HADOOP_SECURITY_AUTHENTICATION_KEY, "kerberos");
+                    this.kerberosAuthentication(kerberosPrincipal, kerberosKeytabFilePath, hadoopConf);
+                }
+                //初始化HDFS
+                Path path = new Path(tablePath);
+                FileSystem fs = FSUtils.getFs(tablePath, hadoopConf);
                 if (!fs.exists(path)) {
                     HoodieTableMetaClient.withPropertyBuilder()
                         .setTableType(HUDI_WRITE_TYPE_MOR.equals(tableType) ? HoodieTableType.MERGE_ON_READ : HoodieTableType.COPY_ON_WRITE)
@@ -216,6 +226,20 @@ public class HudiWriter extends Writer {
             }
             if (!writeRecords.isEmpty()) {
                 flushCache(writeRecords);
+            }
+        }
+
+        private void kerberosAuthentication(String kerberosPrincipal, String kerberosKeytabFilePath, org.apache.hadoop.conf.Configuration hadoopConf){
+            if(StringUtils.isNotBlank(kerberosPrincipal) && StringUtils.isNotBlank(kerberosKeytabFilePath)){
+                UserGroupInformation.setConfiguration(hadoopConf);
+                try {
+                    UserGroupInformation.loginUserFromKeytab(kerberosPrincipal, kerberosKeytabFilePath);
+                } catch (Exception e) {
+                    String message = String.format("kerberos认证失败,请确定kerberosKeytabFilePath[%s]和kerberosPrincipal[%s]填写正确",
+                            kerberosKeytabFilePath, kerberosPrincipal);
+                    LOG.error(message);
+                    throw DataXException.asDataXException(HudiWriterErrorCode.KERBEROS_LOGIN_ERROR, e);
+                }
             }
         }
 
