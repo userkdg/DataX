@@ -162,6 +162,8 @@ public class MongoDBReader extends Reader {
                         record.addColumn(new LongColumn((Integer) tempCol));
                     }else if (tempCol instanceof Long) {
                         record.addColumn(new LongColumn((Long) tempCol));
+                    }else if (tempCol instanceof String) {
+                        record.addColumn(new StringColumn(tempCol.toString()));
                     }else if (tempCol instanceof ObjectId) {
                         record.addColumn(new StringColumn(tempCol.toString()));
                     } else {
