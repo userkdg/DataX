@@ -162,19 +162,21 @@ public class MongoDBReader extends Reader {
                         record.addColumn(new LongColumn((Integer) tempCol));
                     }else if (tempCol instanceof Long) {
                         record.addColumn(new LongColumn((Long) tempCol));
+                    }else if (tempCol instanceof ObjectId) {
+                        record.addColumn(new StringColumn(tempCol.toString()));
                     } else {
                         if(KeyConstant.isArrayType(column.getString(KeyConstant.COLUMN_TYPE))) {
                             String splitter = column.getString(KeyConstant.COLUMN_SPLITTER);
-                            if(Strings.isNullOrEmpty(splitter)) {
+                            if (Strings.isNullOrEmpty(splitter)) {
                                 throw DataXException.asDataXException(MongoDBReaderErrorCode.ILLEGAL_VALUE,
-                                    MongoDBReaderErrorCode.ILLEGAL_VALUE.getDescription());
+                                        MongoDBReaderErrorCode.ILLEGAL_VALUE.getDescription());
                             } else {
-                                ArrayList array = (ArrayList)tempCol;
+                                ArrayList array = (ArrayList) tempCol;
                                 String tempArrayStr = Joiner.on(splitter).join(array);
                                 record.addColumn(new StringColumn(tempArrayStr));
                             }
                         } else {
-                            record.addColumn(new StringColumn(tempCol.toString()));
+                            record.addColumn(new StringColumn(((Document) tempCol).toJson()));
                         }
                     }
                 }
