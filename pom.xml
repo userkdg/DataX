@@ -114,7 +114,6 @@
         <module>tsdbwriter</module>
         <module>gdbwriter</module>
         <module>oscarwriter</module>
-        <module>hudiwriter</module>
 
         <!-- common support module -->
         <module>plugin-rdbms-util</module>
