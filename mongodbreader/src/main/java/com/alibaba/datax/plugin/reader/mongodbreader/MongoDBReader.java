@@ -174,6 +174,7 @@ public class MongoDBReader extends Reader {
                                         MongoDBReaderErrorCode.ILLEGAL_VALUE.getDescription());
                             } else {
                                 ArrayList array = (ArrayList) tempCol;
+                                array.removeIf(row -> row==null);
                                 String tempArrayStr = Joiner.on(splitter).join(array);
                                 record.addColumn(new StringColumn(tempArrayStr));
                             }
