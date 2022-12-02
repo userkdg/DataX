@@ -136,6 +136,11 @@ public class HudiWriter extends Writer {
             } catch (IOException e) {
                 LOG.error(ExceptionUtils.getStackTrace(e));
             }
+            Map<String, String> typeMap = new HashMap<String, String>(){{
+                put("date", "string");
+                put("datetime", "string");
+                put("bigint", "long");
+            }};
             JSONArray fields = new JSONArray();
             for (Configuration columnConfig : columnsList) {
                 JSONObject confObject = new JSONObject();
@@ -143,7 +148,7 @@ public class HudiWriter extends Writer {
                 String configType = columnConfig.getString("type");
                 JSONArray unionsType = new JSONArray();
                 unionsType.add("null");
-                unionsType.add("date".equals(configType) || "datetime".equals(configType) ? "string" : configType);
+                unionsType.add(typeMap.getOrDefault(configType, configType));
                 confObject.put("type", unionsType);
                 fields.add(confObject);
             }
@@ -196,6 +201,7 @@ public class HudiWriter extends Writer {
                         case "int":
                             row.put(columnName, Integer.parseInt(rawData.toString()));
                             break;
+                        case "bigint":
                         case "long":
                             row.put(columnName, Long.parseLong(rawData.toString()));
                             break;
