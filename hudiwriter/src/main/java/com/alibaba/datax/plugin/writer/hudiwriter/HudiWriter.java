@@ -141,7 +141,10 @@ public class HudiWriter extends Writer {
                 JSONObject confObject = new JSONObject();
                 confObject.put("name", columnConfig.getString("name"));
                 String configType = columnConfig.getString("type");
-                confObject.put("type", "date".equals(configType) || "datetime".equals(configType) ? "string" : configType);
+                JSONArray unionsType = new JSONArray();
+                unionsType.add("null");
+                unionsType.add("date".equals(configType) || "datetime".equals(configType) ? "string" : configType);
+                confObject.put("type", unionsType);
                 fields.add(confObject);
             }
 
@@ -150,6 +153,8 @@ public class HudiWriter extends Writer {
             schemaObject.put("name", "triprec");
             schemaObject.put("fields", fields);
             String schemaStr = schemaObject.toJSONString();
+            System.out.println("===============hudi schema===========");
+            System.out.println(schemaStr);
 
             avroSchema = new Schema.Parser().parse(schemaStr);
 
@@ -190,6 +195,9 @@ public class HudiWriter extends Writer {
                     switch (columnType) {
                         case "int":
                             row.put(columnName, Integer.parseInt(rawData.toString()));
+                            break;
+                        case "long":
+                            row.put(columnName, Long.parseLong(rawData.toString()));
                             break;
                         case "float":
                             row.put(columnName, Float.parseFloat(rawData.toString()));
