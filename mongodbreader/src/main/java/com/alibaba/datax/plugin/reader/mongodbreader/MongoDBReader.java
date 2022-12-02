@@ -1,10 +1,6 @@
 package com.alibaba.datax.plugin.reader.mongodbreader;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import com.alibaba.datax.common.element.BoolColumn;
 import com.alibaba.datax.common.element.DateColumn;
@@ -174,12 +170,16 @@ public class MongoDBReader extends Reader {
                                         MongoDBReaderErrorCode.ILLEGAL_VALUE.getDescription());
                             } else {
                                 ArrayList array = (ArrayList) tempCol;
-                                array.removeIf(row -> row==null);
+                                array.removeIf(row -> row == null);
                                 String tempArrayStr = Joiner.on(splitter).join(array);
                                 record.addColumn(new StringColumn(tempArrayStr));
                             }
-                        } else {
+                        } else if (tempCol instanceof Document){
                             record.addColumn(new StringColumn(((Document) tempCol).toJson()));
+                        } else if (tempCol instanceof List || tempCol instanceof Map) {
+                            record.addColumn(new StringColumn(JSON.toJSONString(tempCol)));
+                        } else {
+                            record.addColumn(new StringColumn(tempCol.toString()));
                         }
                     }
                 }
