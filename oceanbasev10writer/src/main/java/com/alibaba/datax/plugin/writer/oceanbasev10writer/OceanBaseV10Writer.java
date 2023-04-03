@@ -12,7 +12,7 @@ import com.alibaba.datax.plugin.rdbms.writer.util.WriterUtil;
 import com.alibaba.datax.plugin.writer.oceanbasev10writer.task.ConcurrentTableWriterTask;
 import com.alibaba.datax.plugin.writer.oceanbasev10writer.util.DbUtils;
 import com.alibaba.datax.plugin.writer.oceanbasev10writer.util.ObWriterUtils;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +61,7 @@ public class OceanBaseV10Writer extends Writer {
 			checkCompatibleMode(originalConfig);
 			//将config中的column和table中的关键字进行转义
 			List<String> columns = originalConfig.getList(Key.COLUMN, String.class);
-			ObWriterUtils.escapeDatabaseKeywords(columns);
+			ObWriterUtils.escapeDatabaseKeyword(columns);
 			originalConfig.set(Key.COLUMN, columns);
 
 			List<JSONObject> conns = originalConfig.getList(Constant.CONN_MARK, JSONObject.class);
@@ -69,7 +69,7 @@ public class OceanBaseV10Writer extends Writer {
 				JSONObject conn = conns.get(i);
 				Configuration connConfig = Configuration.from(conn.toString());
 				List<String> tables = connConfig.getList(Key.TABLE, String.class);
-				ObWriterUtils.escapeDatabaseKeywords(tables);
+				ObWriterUtils.escapeDatabaseKeyword(tables);
 				originalConfig.set(String.format("%s[%d].%s", Constant.CONN_MARK, i, Key.TABLE), tables);
 			}
 			this.commonJob = new CommonRdbmsWriter.Job(DATABASE_TYPE);

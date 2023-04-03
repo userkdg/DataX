@@ -384,6 +384,9 @@ public final class DBUtil {
             // unit ms
             prop.put("oracle.jdbc.ReadTimeout", socketTimeout);
         }
+        if (dataBaseType == DataBaseType.OceanBase) {
+            url = url.replace("jdbc:mysql:", "jdbc:oceanbase:");
+        }
 
         return connect(dataBaseType, url, prop);
     }
@@ -726,6 +729,11 @@ public final class DBUtil {
                 DBUtil.doDealWithSessionConfig(conn, sessionConfig, message);
                 break;
             case MySql:
+                sessionConfig = config.getList(Key.SESSION,
+                        new ArrayList<String>(), String.class);
+                DBUtil.doDealWithSessionConfig(conn, sessionConfig, message);
+                break;
+            case SQLServer:
                 sessionConfig = config.getList(Key.SESSION,
                         new ArrayList<String>(), String.class);
                 DBUtil.doDealWithSessionConfig(conn, sessionConfig, message);
