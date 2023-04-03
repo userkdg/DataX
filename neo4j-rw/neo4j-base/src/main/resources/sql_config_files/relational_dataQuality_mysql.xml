@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sql>
+    <getDataQualityRule   type="NODE" workName="质量规则同步" seq="1" nodeName="质量规则" label="model.rule.dataQualityRuleEntity" columns="guid,moiName,moiDisplayName,id,ruleCode,ruleName,ruleDesc,datasourceName,schemaName,tableName,columnName,ruleSql,totalSql,compareLogic,ruleTemplateName,nextTaskCode,alarmName,isSendMsg,runFlag,createBy,createTime,updateBy,updateTime,sysName">
+        <![CDATA[
+              select
+                  CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}',';',t1.ID) as guid,
+                    t1.RULE_NAME as moiName,
+                    t1.RULE_DESC as moiDisplayName,
+                    t1.ID as id,
+                    t1.TRULE_CODE as ruleCode,
+                    t1.RULE_NAME as ruleName,
+                    t1.RULE_DESC as ruleDesc,
+                    t2.NAME AS datasourceName,
+                    t1.SCHEMA_NAME as schemaName,
+                    t1.TABLE_NAME as tableName,
+                    t1.COLUMN_NAME as columnName,
+                    t1.RULE_SQL as ruleSql,
+                    t1.TOTAL_SQL as totalSql,
+                    t1.COMPARE_LOGIC as compareLogic,
+                    t1.RULE_TEMPLATE_NAME as ruleTemplateName,
+                    t1.NEXT_TASK_CODE as nextTaskCode,
+                    t3.NAME AS alarmName,
+                    t1.IS_SEND_MSG as isSendMsg,
+                    t1.RUN_FLAG as runFlag,
+                    t1.CREATOR_NAME as createBy,
+                    DATE_FORMAT(t1.CREATE_TIME,'%Y%m%d%H%i%s') AS createTime,
+                    t1.UPDATER_NAME as updateBy,
+                    DATE_FORMAT(t1.UPDATE_TIME,'%Y%m%d%H%i%s') AS updateTime,
+                    t1.SYS_NAME as sysName
+                FROM
+                    (
+                    SELECT
+                        t1.ID,
+                        t1.TRULE_CODE,
+                        t1.RULE_NAME,
+                        t1.RULE_DESC,
+                        t1.TECHNICAL_DEPT_NAME,
+                        t1.DATASOURCE_ID,
+                        t1.SCHEMA_NAME,
+                        t1.TABLE_NAME,
+                        t1.COLUMN_NAME,
+                        t1.RULE_SQL,
+                        t1.TOTAL_SQL,
+                        t1.REF_RULE_SQL AS COMPARE_LOGIC,
+                        t1.RULE_TEMPLATE_NAME,
+                        t1.NEXT_TASK_CODE,
+                        t1.IS_SEND_MSG,
+                        t1.RUN_FLAG,
+                        t1.CREATOR_NAME,
+                        t1.CREATE_TIME,
+                        t1.UPDATER_NAME,
+                        t1.UPDATE_TIME,
+                        t2.SYS_ID,
+                        t2.SYS_NAME
+                    FROM
+                        t_dq_technical_rule t1 left join t_dq_data_source t2 on t1.DATASOURCE_ID = t2.ID
+                    WHERE
+                        t1.IS_DELETE = 0
+                    ) t1
+                    LEFT JOIN t_dq_data_source t2 ON t1.DATASOURCE_ID = t2.ID
+	            LEFT JOIN t_dq_alarm_example t3 ON t1.TECHNICAL_DEPT_NAME = t3.id
+        ]]>
+    </getDataQualityRule>
+
+
+    <getDataQualitySchedule   type="NODE" workName="规则调度同步" seq="2"  nodeName="规则调度" label="model.rule.dataQualityScheduleEntity" columns="guid,id,moiName,cronExpression,description,createBy,createTime,updateBy,updateTime">
+        SELECT
+        CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}',';',ID) as guid,
+        ID as id,
+        NAME as moiName,
+        CRON_EXPRESSION as cronExpression,
+        DESCRIPTION as description,
+        CREATOR_NAME as createBy,
+        DATE_FORMAT(CREATE_TIME,'%Y%m%d%H%i%s') AS createTime,
+        UPDATER_NAME as updateBy,
+        DATE_FORMAT(UPDATE_TIME,'%Y%m%d%H%i%s') AS updateTime
+        FROM
+        t_dq_schedule_task
+    </getDataQualitySchedule>
+
+
+    <getDataQualityFolderToDataQualityRuleEntity  type="RELATIONSHIP" workName="同步质量文件夹->质量规则" seq="3" label="model.dataServer.dataQualityFolderToDataQualityRuleEntity" srcLabel="model.rule.DataQualityFolder" targetLabel="model.rule.dataQualityRuleEntity">
+        select
+        CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}') as sourceGuid,
+        CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}',';',a.ID) as targetGuid
+        from t_dq_technical_rule a
+        where a.IS_DELETE = 0
+    </getDataQualityFolderToDataQualityRuleEntity>
+
+
+    <getDataQualityFolderToDataQualityRuleEntity  type="RELATIONSHIP" workName="同步质量文件夹->规则调度" seq="4" label="model.dataServer.dataQualityFolderToDataQualityScheduleEntity" srcLabel="model.rule.DataQualityFolder" targetLabel="model.rule.dataQualityScheduleEntity">
+        select
+        CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}') as sourceGuid,
+        CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}',';',a.ID) as targetGuid
+        from t_dq_schedule_task a
+    </getDataQualityFolderToDataQualityRuleEntity>
+
+    <getDataQualityScheduleToDataQualityRuleEntity type="RELATIONSHIP" workName="规则调度->质量规则" seq="5" label="model.dataServer.dataQualityScheduleToDataQualityRuleEntity" srcLabel="model.rule.dataQualityScheduleEntity" targetLabel="model.rule.dataQualityRuleEntity">
+        select
+            CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}',';',TASK_ID) as sourceGuid,
+            CONCAT('${param.systemId}',';','${param.env}',';','数据质量',';','${param.importName}', ';',TECH_RULE_ID) as targetGuid
+        from t_dq_task_rule_relation
+    </getDataQualityScheduleToDataQualityRuleEntity>
+
+
+</sql>

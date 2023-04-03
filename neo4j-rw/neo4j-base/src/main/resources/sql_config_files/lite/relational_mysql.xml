@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sql>
+
+    <getTables type="NODE" workName="同步表" seq="1" nodeName="表" label="resource.relational.tableEntity" columns="moiName,comment,moiCreateDate,moiUpdateDate,owner,isTemporary,guid,tableRows,avgRowLength,dataLength,indexLength">
+        <![CDATA[
+			SELECT
+                DISTINCT t.table_name AS moiName,
+                t.table_comment AS comment,
+                DATE_FORMAT(t.CREATE_TIME,'%Y%m%d%H%i%s') AS moiCreateDate,
+                DATE_FORMAT(t.UPDATE_TIME,'%Y%m%d%H%i%s') AS moiUpdateDate,
+                t.TABLE_SCHEMA as owner,
+                case when lower('${param.schema}') = 'temp' then 'true' else 'false' end as isTemporary,
+                CONCAT('${param.systemId}',';','${param.env}',';','数据字典',';',t.TABLE_SCHEMA,';',t.TABLE_SCHEMA,';',t.TABLE_NAME) as guid,
+                t.table_rows as tableRows,
+                t.avg_row_length as avgRowLength,
+                t.data_length as dataLength,
+                t.index_length as indexLength
+            FROM information_schema.TABLES t
+                WHERE t.table_schema = '${param.schema}'
+            AND t.table_type = 'BASE TABLE'
+                ORDER BY moiName ASC
+		]]>
+    </getTables>
+
+
+    <getTableColumn type="NODE" workName="同步表字段" seq="2" nodeName="表字段" label="resource.relational.columnEntity" sourceLabel="resource.relational.tableEntity" columns="moiCreateDate,moiUpdateDate,moiName,columnId,moiSeq,initialValue,isNullable,sqlSimpleType,length,precision,scale,comment,characterSetName,guid,tableName">
+        <![CDATA[
+           SELECT
+                DATE_FORMAT(t.CREATE_TIME,'%Y%m%d%H%i%s') AS moiCreateDate,
+                DATE_FORMAT(t.UPDATE_TIME,'%Y%m%d%H%i%s') AS moiUpdateDate,
+                c.column_name AS moiName,
+                c.ordinal_position AS columnId,
+                c.ordinal_position AS moiSeq,
+                c.column_default AS initialValue,
+                c.is_nullable AS isNullable,
+                c.data_type AS sqlSimpleType,
+                c.character_maximum_length AS length,
+                c.numeric_precision AS `precision`,
+                c.numeric_scale AS scale,
+                c.column_comment AS `comment`,
+                c.CHARACTER_SET_NAME AS characterSetName,
+                CONCAT('${param.systemId}',';','${param.env}',';','数据字典',';',t.TABLE_SCHEMA,';',t.TABLE_SCHEMA,';',t.table_name,';',c.column_name) as guid,
+                t.table_name as tableName
+            FROM
+                (
+                    SELECT
+                        table_comment,
+                        table_schema,
+                        table_name,
+                        table_type,
+                        CREATE_TIME,
+                        UPDATE_TIME,
+                        TABLE_ROWS,
+                        DATA_LENGTH
+                    FROM
+                        information_schema. TABLES
+                    WHERE
+                        table_schema = '${param.schema}'
+                    AND table_type = 'BASE TABLE'
+                ) t,
+                information_schema.COLUMNS c
+            WHERE
+                 t.table_schema = c.table_schema
+            AND  t.table_name = c.table_name
+            order by t.table_name,c.ordinal_position asc
+		]]>
+    </getTableColumn>
+
+    <getView type="NODE" workName="同步表视图" seq="3" nodeName="视图" label="resource.relational.viewEntity" columns="moiName,guid,sql,creator">
+        SELECT
+            v.TABLE_NAME as moiName,
+            CONCAT('${param.systemId}',';','${param.env}',';','数据字典',';',v.TABLE_SCHEMA,';',v.TABLE_SCHEMA,';',v.TABLE_NAME) as guid,
+            v.VIEW_DEFINITION as `sql`,
+            v.`DEFINER` as creator
+        FROM
+            information_schema.VIEWS v
+        WHERE
+            v.TABLE_SCHEMA = '${param.schema}' ORDER BY v.TABLE_NAME ASC
+    </getView>
+
+    <getViewColumn type="NODE" workName="同步视图字段" seq="5" nodeName="视图字段" label="resource.relational.columnEntity" sourceLabel="resource.relational.viewEntity"  columns="moiName,columnId,moiSeq,initialValue,isNullable,sqlSimpleType,length,precision,scale,comment,characterSetName,guid">
+        select
+        c.column_name as moiName,
+        c.ordinal_position as columnId,
+        c.ordinal_position as moiSeq,
+        c.column_default as initialValue,
+        c.is_nullable as isNullable,
+        c.data_type as sqlSimpleType,
+        c.character_maximum_length as length,
+        c.numeric_precision as `precision`,
+        c.numeric_scale as scale,
+        c.column_comment as `comment`,
+        c.CHARACTER_SET_NAME as characterSetName,
+        CONCAT('${param.systemId}',';','${param.env}',';','数据字典',';',t.TABLE_SCHEMA,';',t.TABLE_SCHEMA,';',t.table_name,';',c.column_name) as guid
+        from information_schema.TABLES t
+        left join information_schema.VIEWS v
+        on(t.table_schema = v.table_schema and t.table_name = v.table_name)
+        left join information_schema.COLUMNS c
+        on(v.table_schema = c.table_schema and v.table_name = c.table_name)
+        where t.table_schema = '${param.schema}' and t.table_type = 'VIEW'
+        order by columnId asc
+    </getViewColumn>
+
+
+</sql>

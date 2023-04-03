@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sql>
+    <insertDtlSql>
+        INSERT
+        INTO
+        data_asset_platform.meta_data_table_view_function_relationship_dtl
+        (
+        obj_id,
+        obj_schema,
+        obj_name,
+        obj_type,
+        obj_nargs,
+        source_obj_id,
+        collect_time
+        )
+        VALUES
+        (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?
+        )
+    </insertDtlSql>
+
+    <insertSumSql>
+        INSERT
+        INTO
+        data_asset_platform.meta_data_table_view_function_relationship_sum
+        (
+        obj_id,
+        obj_schema,
+        obj_name,
+        obj_type,
+        obj_nargs,
+        source_obj_id,
+        source_obj_schema,
+        source_obj_name,
+        source_obj_type,
+        source_obj_nargs,
+        collect_time
+        )
+        VALUES
+        (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?
+        )
+    </insertSumSql>
+
+    <truncateSqlDtl>
+        truncate data_asset_platform.meta_data_table_view_function_relationship_dtl
+    </truncateSqlDtl> 
+    
+    <truncateSqlSum>
+        truncate data_asset_platform.meta_data_table_view_function_relationship_sum
+    </truncateSqlSum>
+    
+</sql>

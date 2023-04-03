@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<datax>
+    <syncTable
+            mapColumns="db_type,system_id,db_name,schema_name,table_name,table_guid,comment,location,input_format,output_format,is_temporary,owner,table_rows,total_size,num_files,is_partition,partition_count,compression_type,tbl_type,biz_line_id,stored_type,external_type,partition_column,code_source_type,warehouse_layer,warehouse_layer_source_type,collect_time,external_tbl_name"
+            targetTable="meta_data_table_snapshot_day" seq="1">
+        <countCql>
+            match (n:`model.bank.systemEntity`)-[]->(v:`model.bank.versionEntity`)-[]->
+            (c:`resource.relational.catalogEntity`)-[]->(cc:`resource.relational.catalogEntity`)-[]->
+            (s:`resource.relational.schemaEntity`)-[]->(t:`resource.relational.tableEntity`)
+            where n.systemId =  '${systemId}' and v.moiName = '${versionName}' and s.moiName = '${schemaName}'
+            return count(t.guid) as total
+        </countCql>
+        <cql>
+            match (n:`model.bank.systemEntity`)-[]->(v:`model.bank.versionEntity`)-[]->
+            (c:`resource.relational.catalogEntity`)-[]->(cc:`resource.relational.catalogEntity`)-[]->
+            (s:`resource.relational.schemaEntity`)-[]->(t:`resource.relational.tableEntity`)
+            where n.systemId =  '${systemId}' and v.moiName = '${versionName}' and s.moiName = '${schemaName}'
+            return s.dbType as db_type,n.guid as system_id,cc.moiName as db_name,s.moiName as schema_name,
+            t.moiName as table_name,t.guid as table_guid,t.comment as comment,t.location as location,
+            t.inputFormat as input_format,t.outputFormat as output_format,t.isTemporary = 'true' as is_temporary,
+            t.owner as owner,t.tableRows as table_rows,t.totalSize as total_size,t.numFiles as num_files,
+            t.isPartition = 'true' as is_partition,t.partitionCount as partition_count,t.parquetCompression as compression_type,t.tblType as tbl_type,
+            t.bizLineId as biz_line_id,t.storedType as stored_type,t.externalType as external_type,t.partitionColumn as partition_column,
+            case when t.bizLineId is null then -1 else 1 end as code_source_type,t.warehouseLayer as warehouse_layer,case when t.warehouseLayer is null then -1 else 3 end as warehouse_layer_source_type,
+            apoc.date.format(apoc.date.currentTimestamp() + 1000 * 60 * 60 * 8 ,'ms','yyyy-MM-dd 00:00:00') as collect_time, t.externalTblName as external_tbl_name
+        </cql>
+        <postSql>
+            <sql comment="命名规则更新业务线-现代渠道">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.ka}' WHERE biz_line_id is null and
+                (table_name like 'ka_%' or table_name like 'ka_sales_%' or table_name like 'ka_duty_%' or table_name like 'ka_price_%'
+                or table_name like 'ka_order_%' or table_name like 'ka_stock_%' or table_name like 'ka_out_%' or table_name like 'ka_in_%'
+                or table_name like 'ka_tpm_%' or table_name like 'ka_resou_%')
+            </sql>
+            <sql comment="命名规则更新业务线-电商">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.ec}' WHERE biz_line_id is null and
+                (table_name like 'ec_%' or table_name like 'ec2b_%' or table_name like 'ec2c_%' or table_name like 'eccs_%'
+                or table_name like 'ec_oms_%' or table_name like 'ec_oms_product_%' or table_name like 'ec_oms_order_%' or table_name like 'ec_oms_exc_%'
+                or table_name like 'ec_oms_exc_%')
+            </sql>
+            <sql comment="命名规则更新业务线-财务">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.fi}' WHERE biz_line_id is null and
+                (table_name like 'fi_%' or table_name like 'fi2b_%' or table_name like 'fi2c_%')
+            </sql>
+            <sql comment="命名规则更新业务线-供应链">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.sc}' WHERE biz_line_id is null and table_name like '%gyl%'
+            </sql>
+            <sql comment="命名规则更新业务线-人事行政后勤">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.hr}' WHERE biz_line_id is null and
+                (table_name like 'hr_%')
+            </sql>
+            <sql comment="命名规则更新业务线-社区（含高校等）">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.moon}' WHERE biz_line_id is null and
+                (table_name like 'sq_%' or table_name like 'sqgx_%')
+            </sql>
+            <sql comment="命名规则更新业务线-洗衣服务">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.moon}' WHERE biz_line_id is null and
+                (table_name like 'wash_%')
+            </sql>
+            <sql comment="命名规则更新业务线-月亮商城">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.moon}' WHERE biz_line_id is null and
+                (table_name like 'moon_%')
+            </sql>
+            <sql comment="命名规则更新业务线-客服">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.mag}' WHERE biz_line_id is null and
+                (table_name like 'cs_%')
+            </sql>
+            <sql comment="命名规则更新业务线-管理学院">
+                UPDATE meta_data_table_snapshot_day SET biz_line_id = '${bizLineParam.mag}' WHERE biz_line_id is null and
+                (table_name like 'om_%')
+            </sql>
+            <sql comment="更新业务线来源方式">
+                UPDATE meta_data_table_snapshot_day SET code_source_type = 3 WHERE code_source_type = -1 AND biz_line_id is not null
+            </sql>
+        </postSql>
+    </syncTable>
+
+</datax>

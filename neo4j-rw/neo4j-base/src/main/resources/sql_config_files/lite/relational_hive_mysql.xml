@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sql>
+
+    <getTables type="NODE" workName="同步表" seq="1" nodeName="表" label="resource.relational.tableEntity" columns="moiName,comment,location,inputFormat,outputFormat,totalSize,isPartition,moiCreateDate,owner,isTemporary,guid,tableRows,numFiles,lastModifiedTime,moiUpdateDate,lastAccessTime,avgRowLength,parquetCompression,parquetCompress,dataLength,tblType,partitionCount">
+        <![CDATA[
+            SELECT
+                LOWER(t1.TBL_NAME)                           AS moiName,
+                t2.PARAM_VALUE                               AS COMMENT,
+				(select case when count(PART_ID) > 0 then 'true' else 'false' end  from PARTITIONS where TBL_ID = t1.tbl_id )  as isPartition,
+                FROM_UNIXTIME(t1.CREATE_TIME,'%Y%m%d%H%i%s') AS moiCreateDate,
+                t1.OWNER                                     AS owner,
+                CASE
+                    WHEN LOWER('${param.schema}') = 'temp'
+                    THEN 'true'
+                    ELSE 'false'
+                END AS isTemporary,
+                CONCAT('${param.systemId}',';','{{envCn}}',';','{{catalogCn}}',';','${param.importName}',';','${param.schema}',';',LOWER(t1.TBL_NAME)) AS guid,
+				t1.TBL_TYPE as tblType
+            FROM
+                TBLS t1
+            LEFT JOIN
+                (
+                    SELECT
+                        TBL_ID,
+                        PARAM_KEY,
+                        PARAM_VALUE
+                    FROM
+                        TABLE_PARAMS
+                    WHERE
+                        PARAM_KEY = 'comment') t2
+            ON
+                t1.TBL_ID = t2.TBL_ID
+            WHERE
+                t1.DB_ID IN
+                (
+                    SELECT
+                        DB_ID
+                    FROM
+                        DBS
+                    WHERE
+                        LOWER(NAME) = LOWER('${param.schema}') )
+            AND t1.TBL_TYPE != 'VIRTUAL_VIEW'
+            ORDER BY
+                LOWER(t1.TBL_NAME) ASC
+        ]]>
+    </getTables>
+
+    <getTableColumn type="NODE" workName="同步表字段" seq="2" nodeName="表字段" label="resource.relational.columnEntity" sourceLabel="resource.relational.tableEntity" columns="moiCreateDate,moiName,comment,sqlSimpleType,moiSeq,columnId,guid,tableName">
+        <![CDATA[
+        SELECT * FROM
+			(
+				SELECT
+					FROM_UNIXTIME(TBLS.CREATE_TIME,'%Y%m%d%H%i%s') AS moiCreateDate,
+					LOWER(COLUMNS_V2.COLUMN_NAME) AS moiName,
+					COLUMNS_V2.COMMENT AS `comment`,
+					COLUMNS_V2.TYPE_NAME AS sqlSimpleType,
+					COLUMNS_V2.INTEGER_IDX AS moiSeq,
+					COLUMNS_V2.INTEGER_IDX AS columnId,
+          CONCAT('${param.systemId}',';','{{envCn}}',';','{{catalogCn}}',';','${param.importName}',';','${param.schema}',';',LOWER(TBLS.TBL_NAME),';',LOWER(COLUMNS_V2.COLUMN_NAME)) as guid,
+          LOWER(TBLS.TBL_NAME) as tableName
+				FROM
+					DBS
+				JOIN
+					TBLS
+				ON
+					TBLS.DB_ID = DBS.DB_ID
+				JOIN
+					SDS
+				ON
+					TBLS.SD_ID = SDS.SD_ID
+				 JOIN
+					COLUMNS_V2
+				ON
+					SDS.CD_ID = COLUMNS_V2.CD_ID
+				WHERE
+						TBLS.TBL_TYPE != 'VIRTUAL_VIEW'
+					AND
+						LOWER(DBS.NAME) = LOWER('${param.schema}')
+				UNION ALL
+				SELECT
+					FROM_UNIXTIME(TBLS.CREATE_TIME,'%Y%m%d%H%i%s') AS moiCreateDate,
+					LOWER(PARTITION_KEYS.PKEY_NAME) AS moiName,
+					PARTITION_KEYS.PKEY_COMMENT AS `comment`,
+					PARTITION_KEYS.PKEY_TYPE AS sqlSimpleType,
+					(999 + PARTITION_KEYS.INTEGER_IDX) AS moiSeq,
+					(999 + PARTITION_KEYS.INTEGER_IDX) AS columnId,
+                    CONCAT('${param.systemId}',';','{{envCn}}',';','{{catalogCn}}',';','${param.importName}',';','${param.schema}',';',LOWER(TBLS.TBL_NAME),';',LOWER(PARTITION_KEYS.PKEY_NAME)) as guid,
+                    TBLS.TBL_NAME as tableName
+				FROM
+					DBS
+				JOIN
+					TBLS
+				ON
+					TBLS.DB_ID = DBS.DB_ID
+				JOIN
+					SDS
+				ON
+					TBLS.SD_ID = SDS.SD_ID
+				JOIN
+					PARTITION_KEYS
+				ON PARTITION_KEYS.TBL_ID = TBLS.TBL_ID
+				WHERE
+						TBLS.TBL_TYPE != 'VIRTUAL_VIEW'
+					AND
+						LOWER(DBS.NAME) = LOWER('${param.schema}')
+			) t where t.moiName is not null order by t.moiName
+        ]]>
+    </getTableColumn>
+
+    <getView type="NODE" workName="同步表视图" seq="3" nodeName="视图" label="resource.relational.viewEntity" columns="moiName,guid,moiCreateDate,sql,creator">
+        <![CDATA[
+            select
+                LOWER(TBL_NAME) as moiName,
+                CONCAT('${param.systemId}',';','{{envCn}}',';','{{catalogCn}}',';','${param.importName}',';','${param.schema}',';',LOWER(TBL_NAME)) as guid,
+                FROM_UNIXTIME(CREATE_TIME,'%Y%m%d%H%i%s') as moiCreateDate,
+                VIEW_ORIGINAL_TEXT as `sql`,
+                OWNER as creator
+            from
+            TBLS where DB_ID IN( SELECT DB_ID FROM DBS WHERE LOWER(NAME) = LOWER('${param.schema}') ) and TBL_TYPE = 'VIRTUAL_VIEW'
+            order by LOWER(TBL_NAME)
+        ]]>
+    </getView>
+
+    <getViewColumn type="NODE" workName="同步视图字段" seq="5" nodeName="视图字段" label="resource.relational.columnEntity" sourceLabel="resource.relational.viewEntity" columns="moiCreateDate,moiName,comment,sqlSimpleType,moiSeq,columnId,guid">
+        <![CDATA[
+		SELECT
+				FROM_UNIXTIME(TBLS.CREATE_TIME,'%Y%m%d%H%i%s') AS moiCreateDate,
+				LOWER(COLUMNS_V2.COLUMN_NAME) AS moiName,
+				COLUMNS_V2.COMMENT AS `comment`,
+				COLUMNS_V2.TYPE_NAME AS sqlSimpleType,
+				COLUMNS_V2.INTEGER_IDX AS moiSeq,
+				COLUMNS_V2.INTEGER_IDX AS columnId,
+                CONCAT('${param.systemId}',';','{{envCn}}',';','{{catalogCn}}',';','${param.importName}',';','${param.schema}',';',LOWER(TBLS.TBL_NAME),';',LOWER(COLUMNS_V2.COLUMN_NAME)) as guid
+			FROM
+				DBS
+			JOIN
+				TBLS
+			ON
+				TBLS.DB_ID = DBS.DB_ID
+			JOIN
+				SDS
+			ON
+				TBLS.SD_ID = SDS.SD_ID
+			 JOIN
+				COLUMNS_V2
+			ON
+				SDS.CD_ID = COLUMNS_V2.CD_ID
+			WHERE
+					TBLS.TBL_TYPE = 'VIRTUAL_VIEW'
+		  AND LOWER(DBS.NAME) = LOWER('${param.schema}') order by LOWER(COLUMNS_V2.COLUMN_NAME)
+        ]]>
+    </getViewColumn>
+
+
+</sql>

@@ -7,6 +7,12 @@
         <groupId>com.alibaba.datax</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
+    <packaging>pom</packaging>
+    <modules>
+        <module>neo4j-base</module>
+        <module>neo4jreader</module>
+        <module>neo4jwriter</module>
+    </modules>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>neo4j-rw</artifactId>
