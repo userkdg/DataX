@@ -38,11 +38,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 注意：https://github.com/searchbox-io/Jest 不再维护，最好基于官方客户端开发
  * Created by xiongfeng.bxf on 17/2/8.
  */
 public class ElasticSearchClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchClient.class);
-    
+
     private JestClient jestClient;
     private Configuration conf;
 
@@ -252,7 +253,7 @@ public class ElasticSearchClient {
         }
         return true;
     }
-    
+
     /**
      * 获取index的mapping
      */
@@ -270,7 +271,7 @@ public class ElasticSearchClient {
             throw DataXException.asDataXException(ElasticSearchWriterErrorCode.ES_MAPPINGS, e.getMessage(), e);
         }
     }
-    
+
     public String getMappingForIndexType(String indexName, String typeName) {
         String indexMapping = this.getIndexMapping(indexName);
         JSONObject indexMappingInJson = JSON.parseObject(indexMapping);

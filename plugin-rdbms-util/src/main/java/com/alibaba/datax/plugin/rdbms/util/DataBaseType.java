@@ -26,7 +26,6 @@ public enum DataBaseType {
     OceanBase("oceanbase", "com.alipay.oceanbase.jdbc.Driver"),
     StarRocks("starrocks", "com.mysql.jdbc.Driver"),
     Databend("databend", "com.databend.jdbc.DatabendDriver"),
-    OceanBase("oceanbase", "com.alipay.oceanbase.jdbc.Driver"),
     Hive("hive", "org.apache.hive.jdbc.HiveDriver"),
     Impala("impala", "com.cloudera.impala.jdbc41.Driver");
 

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sql>
+    <getETLMapping>
+        SELECT
+        t1.design_id             designId,
+        t1.target_table_en_name  targetTableEnName,
+        t1.target_table_cn_name  targetTableCnName,
+        t1.last_update_time      lastUpdateTime,
+        t1.model_level           modelLevel,
+        t1.target_table_mode     targetTableMode,
+        t1.target_table_desc     targetTableDesc,
+        t1.sync_database_type    syncDatabaseType,
+        t1.is_effect             isEffect,
+        t1.pre_dispatch_task_ids preDispatchTaskIds,
+        t1.job_execute_rate      jobExecuteRate,
+        t1.create_user_id        createUserId,
+        t1.create_time           createTime,
+        t1.last_update_user_id   lastUpdateUserId,
+        t1.publish_time          publishTime,
+        t1.table_guid            tableGuid
+        FROM
+        etl_main t1
+        INNER JOIN
+        (
+        SELECT
+        design_id,
+        MAX(version_id) AS version_id
+        FROM
+        etl_main
+        WHERE
+        is_publish = 1
+        GROUP BY
+        design_id ) t2
+        ON
+        (
+        t1.design_id = t2. design_id
+        AND t1.version_id = t2.version_id)
+    </getETLMapping>
+
+    <getETLMappingById>
+        SELECT
+        t1.design_id             designId,
+        t1.target_table_en_name  targetTableEnName,
+        t1.target_table_cn_name  targetTableCnName,
+        t1.last_update_time      lastUpdateTime,
+        t1.model_level           modelLevel,
+        t1.target_table_mode     targetTableMode,
+        t1.target_table_desc     targetTableDesc,
+        t1.sync_database_type    syncDatabaseType,
+        t1.is_effect             isEffect,
+        t1.pre_dispatch_task_ids preDispatchTaskIds,
+        t1.job_execute_rate      jobExecuteRate,
+        t1.create_user_id        createUserId,
+        t1.create_time           createTime,
+        t1.last_update_user_id   lastUpdateUserId,
+        t1.publish_time          publishTime,
+        t1.table_guid            tableGuid
+        FROM
+        etl_main t1
+        INNER JOIN
+        (
+        SELECT
+        design_id,
+        MAX(version_id) AS version_id
+        FROM
+        etl_main
+        WHERE
+        is_publish = 1
+        GROUP BY
+        design_id ) t2
+        ON
+        (
+        t1.design_id = t2. design_id
+        AND t1.version_id = t2.version_id) where t1.design_id = '$designId'
+    </getETLMappingById>
+</sql>

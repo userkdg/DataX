@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sql>
+    <insertSql>
+        INSERT
+        INTO
+        data_asset_platform.model_relationship_confirm
+        (
+        job_id,
+        job_name,
+        job_update_user_id,
+        job_type,
+        bus_line_id,
+        process_name,
+        sql_script,
+        upstream_system,
+        upstream_model,
+        downstream_system,
+        downstream_model,
+        create_time,
+        sync_time,
+        sync_status,
+        sync_remark,
+        version,
+        operate_user_id,
+        operate_time,
+        status,
+        remark,
+        etl_create_time
+        )
+        VALUES
+        (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?
+        )
+    </insertSql>
+
+    <selectSql>
+        SELECT
+        job_id jobId,
+        process_name processName,
+        sql_script sqlScript,
+        upstream_system upstreamSystem,
+        upstream_model upstreamModel,
+        downstream_system downstreamSystem,
+        downstream_model downstreamModel,
+        create_time createTime,
+        operate_user_id operateUserId,
+        operate_time operateTime,
+        status status,
+        remark remark
+        FROM
+        data_asset_platform.model_relationship_confirm
+        WHERE
+        job_id = '$jobId' and version = 1
+    </selectSql>
+
+    <deleteSql>
+        DELETE
+        FROM
+        data_asset_platform.model_relationship_confirm
+        WHERE
+        version = 0;
+    </deleteSql>
+
+    <updateSql1>
+        UPDATE
+        data_asset_platform.model_relationship_confirm
+        SET
+        version = 0
+        WHERE
+        version = 1;
+    </updateSql1>
+
+    <updateSql2>
+        UPDATE
+        data_asset_platform.model_relationship_confirm
+        SET
+        version = 1
+        WHERE
+        version = 2
+    </updateSql2>
+
+    <callProc>
+        call update_confirm_status(1,1)
+    </callProc>
+</sql>

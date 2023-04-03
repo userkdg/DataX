@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<sql>
+    <getReportVisitCnt7>
+        <![CDATA[
+            SELECT
+                template_nam                templateNam,
+                system_code                 systemCode,
+                SUM(sql_exec_cnt::INT)      reportVisitCnt7
+            FROM
+                BLUEMOON.S_COM_BMREPORT_OPERATE_LOG_OVERVIEW_SUM
+            WHERE
+                DATA_DT::INT >= $dataDtCnt7
+            GROUP BY
+                template_nam,system_code
+        ]]>
+    </getReportVisitCnt7>
+
+    <getReportVisitCnt30>
+        <![CDATA[
+            SELECT
+                template_nam                templateNam,
+                system_code                 systemCode,
+                SUM(sql_exec_cnt::INT)      reportVisitCnt30
+            FROM
+                BLUEMOON.S_COM_BMREPORT_OPERATE_LOG_OVERVIEW_SUM
+            WHERE
+                DATA_DT::INT >= $dataDtCnt30
+            GROUP BY
+                template_nam,system_code
+        ]]>
+    </getReportVisitCnt30>
+
+    <getReportVisitCnt60>
+        <![CDATA[
+            SELECT
+                template_nam                    templateNam,
+                system_code                     systemCode,
+                SUM(sql_exec_cnt::INT)          reportVisitCnt60
+            FROM
+                BLUEMOON.S_COM_BMREPORT_OPERATE_LOG_OVERVIEW_SUM
+            WHERE
+                DATA_DT::INT >= $dataDtCnt60
+            GROUP BY
+                template_nam,system_code
+        ]]>
+    </getReportVisitCnt60>
+
+    <getReportVisitCnt90>
+        <![CDATA[
+            SELECT
+                template_nam                    templateNam,
+                system_code                     systemCode,
+                SUM(sql_exec_cnt::INT)          reportVisitCnt90
+            FROM
+                BLUEMOON.S_COM_BMREPORT_OPERATE_LOG_OVERVIEW_SUM
+            WHERE
+                DATA_DT::INT >= $dataDtCnt90
+            GROUP BY
+                template_nam,system_code
+        ]]>
+    </getReportVisitCnt90>
+
+    <getMenuVisitCnt>
+        <![CDATA[
+            select
+              m.visit_cnt7  menuVisitCnt7,
+              m.visit_cnt30 menuVisitCnt30,
+              m.visit_cnt60 menuVisitCnt60,
+              m.visit_cnt90 menuVisitCnt90
+            from
+              res.res_ecn_menu_visit_sum_d m
+            where
+              m.menu_id in ($menuId) and m.DATA_DT = '$dataDt'
+        ]]>
+    </getMenuVisitCnt>
+    <syncData>
+        <![CDATA[
+            INSERT
+                INTO
+                    data_asset_platform.bmreport_operate_log_overview_sum
+                    (
+                        data_id,
+                        data_dt,
+                        template_nam,
+                        biz_line,
+                        system_code,
+                        templat_visit_cnt7,
+                        templat_visit_cnt30,
+                        templat_visit_cnt60,
+                        templat_visit_cnt90,
+                        menu_visit_cnt7,
+                        menu_visit_cnt30,
+                        menu_visit_cnt60,
+                        menu_visit_cnt90,
+                        collect_time
+                    )
+                VALUES
+                (
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    str_to_date(?,'%Y-%m-%d %H:%i:%s')
+                )
+        ]]>
+    </syncData>
+</sql>
